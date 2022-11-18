@@ -1,7 +1,7 @@
 
 Fonctionnement avec chunk de données flushé sur disque (recommandé si on ne veut pas tout maintenir en mémoire)
 
-= Rotate chunk =
+# Rotate chunk
 
 Exemple de commande: 
 
@@ -13,7 +13,7 @@ On demande de démarrer un enregistrement JFR 5s après le démarrage de la VM. 
 
 Le maxage et le maxsize sont vérifié au moment où un chunk est marqué comme final (finishChunk).
 
-{{{java
+```java
 private void finishChunk(RepositoryChunk chunk, Instant time, PlatformRecording ignoreMe) {
         chunk.finish(time);
         for (PlatformRecording r : getRecordings()) {
@@ -23,11 +23,11 @@ private void finishChunk(RepositoryChunk chunk, Instant time, PlatformRecording 
         }
         FilePurger.purge();
     }
-}}}
+```
 
 A ce moment le chunk est ajouté à la liste des chunks :
 
-{{{java
+```java
     void appendChunk(RepositoryChunk chunk) {
         if (!chunk.isFinished()) {
             throw new Error("not finished chunk " + chunk.getStartTime());
@@ -44,7 +44,7 @@ A ce moment le chunk est ajouté à la liste des chunks :
             trimToSize();
         }
     }
-}}}
+```
 
 Avec chunk.getEndTime().minus(maxAge) on détermine le endtime minimal d'un chunk pour être conservé (REFEND).
 Dans le trimToAge, on prend la head de la queue de chunk (donc théoriquement le plus ancien), si ce chunk est plus vieux que REFEND on le supprime et on poursuit le nettoyage avec le suivante etc...
@@ -53,7 +53,7 @@ le trimToSize on supprime les chunks du plus ancien au plus récent jusqu'à ce 
 
 Quand on dump via la commande JFR.dump, on effectue un snapshot du record en cours. Ce snapshot prend la forme d'un clone
 
-{{{java
+```java
 
 private PlatformRecording newSnapShot(PlatformRecorder recorder, Recording recording, Boolean pathToGcRoots) throws DCmdException, IOException {
         if (recording == null) {
@@ -66,17 +66,17 @@ private PlatformRecording newSnapShot(PlatformRecorder recorder, Recording recor
         PlatformRecording pr = PrivateAccess.getInstance().getPlatformRecording(recording);
         return pr.newSnapshotClone("Dumped by user", pathToGcRoots);
     }
-}}}
+```
 
 On fait repointé le clone sur les chunks du record en cours et on stop le record du clone. Le stop du record entraine le finish du chunk en cours et donc l'eventuel trim des chunk (maxage et ou maxsize).
 
 Un dump correspond à la concaténation des chunks post snapshot (donc ceux qui correpondent à la fenêtre temporelle maxage si on en a mis une).
 
-= Chunk size =
+# Chunk size 
 
 La chunk size est par défaut à 12MB. La rotation des chunks en fonction de la chunk size est piloté par une periodic task java (toutes les secondes) et check shouldRotate via un appel natif. Cela va derrière déclencher un finish du chunk et les mécanismes de maxage/maxsize
 
-{{{cpp
+```cpp
 
 void JfrChunkRotation::evaluate(const JfrChunkWriter& writer) {
   assert(threshold > 0, "invariant");
@@ -94,11 +94,11 @@ bool JfrChunkRotation::should_rotate() {
   return rotate;
 }
 
-}}}
+```
 
 On peut donc à un moment avoir une occupation disque > maxsize, qui correpond à la taille maximal d'un chunk.
 
-= Usages de dump periodique =
+# Usages de dump periodique
 
 Si on veut faire des dumps périodiques, il faut s'outiller soit en externe via jcmd, soit tenter de les déclencher en interne à nos JVM (en cours d'analyse) et/ou peut être JMX.
 
